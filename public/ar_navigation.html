@@ -15,7 +15,7 @@
           directions: "Walk 20 meters ahead, then turn right",
           marker: "hiro",
           arrowRotation: "0 90 0", // Arrow pointing right
-          arrowColor: "#00ff00" // Green arrow
+          arrowColor: "#00ff00", // Green arrow
         },
         {
           id: "waypoint2",
@@ -26,7 +26,7 @@
             "Go past reception and turn left at the end of the hallway",
           marker: "kanji",
           arrowRotation: "0 -90 0", // Arrow pointing left
-          arrowColor: "#00ff00" // Green arrow
+          arrowColor: "#00ff00", // Green arrow
         },
         {
           id: "waypoint3",
@@ -36,135 +36,135 @@
           directions: "You have arrived at the conference room",
           marker: "patt",
           arrowRotation: "0 0 0", // No arrow (or could be pointing up)
-          arrowColor: "#ffff00" // Yellow for destination
+          arrowColor: "#ffff00", // Yellow for destination
         },
       ];
 
       // Improved 3D Arrow Component for AR Navigation
-      AFRAME.registerComponent('direction-arrow', {
+      AFRAME.registerComponent("direction-arrow", {
         schema: {
-          color: {type: 'color', default: '#00ff00'},
-          height: {type: 'number', default: 1.0},
-          width: {type: 'number', default: 0.5},
-          pulsing: {type: 'boolean', default: true},
-          floating: {type: 'boolean', default: true}
+          color: { type: "color", default: "#00ff00" },
+          height: { type: "number", default: 1.0 },
+          width: { type: "number", default: 0.5 },
+          pulsing: { type: "boolean", default: true },
+          floating: { type: "boolean", default: true },
         },
-        
-        init: function() {
+
+        init: function () {
           const data = this.data;
           const el = this.el;
-          
+
           // Create arrow shaft
-          const shaft = document.createElement('a-entity');
-          shaft.setAttribute('geometry', {
-            primitive: 'box',
+          const shaft = document.createElement("a-entity");
+          shaft.setAttribute("geometry", {
+            primitive: "box",
             height: data.height * 0.1,
             width: data.width * 0.2,
-            depth: data.height * 0.6
+            depth: data.height * 0.6,
           });
-          shaft.setAttribute('material', {
+          shaft.setAttribute("material", {
             color: data.color,
             transparent: true,
-            opacity: 0.9
+            opacity: 0.9,
           });
-          shaft.setAttribute('position', {
-            x: 0, 
-            y: 0, 
-            z: -data.height * 0.3
+          shaft.setAttribute("position", {
+            x: 0,
+            y: 0,
+            z: -data.height * 0.3,
           });
-          
+
           // Create arrow head (a triangular prism)
-          const head = document.createElement('a-entity');
-          head.setAttribute('geometry', {
-            primitive: 'cone',
+          const head = document.createElement("a-entity");
+          head.setAttribute("geometry", {
+            primitive: "cone",
             height: data.height * 0.4,
             radiusBottom: data.width * 0.3,
             radiusTop: 0,
-            segmentsRadial: 8
+            segmentsRadial: 8,
           });
-          head.setAttribute('material', {
+          head.setAttribute("material", {
             color: data.color,
             transparent: true,
-            opacity: 0.9
+            opacity: 0.9,
           });
-          head.setAttribute('position', {
-            x: 0, 
-            y: 0, 
-            z: data.height * 0.15
+          head.setAttribute("position", {
+            x: 0,
+            y: 0,
+            z: data.height * 0.15,
           });
-          head.setAttribute('rotation', {
+          head.setAttribute("rotation", {
             x: 90,
             y: 0,
-            z: 0
+            z: 0,
           });
-          
+
           // Create a ring to highlight the arrow
-          const ring = document.createElement('a-entity');
-          ring.setAttribute('geometry', {
-            primitive: 'torus',
+          const ring = document.createElement("a-entity");
+          ring.setAttribute("geometry", {
+            primitive: "torus",
             radius: data.width * 0.4,
-            radiusTubular: data.width * 0.05
+            radiusTubular: data.width * 0.05,
           });
-          ring.setAttribute('material', {
-            color: '#ffffff',
+          ring.setAttribute("material", {
+            color: "#ffffff",
             emissive: data.color,
             emissiveIntensity: 0.5,
             transparent: true,
-            opacity: 0.7
+            opacity: 0.7,
           });
-          ring.setAttribute('position', {
+          ring.setAttribute("position", {
             x: 0,
             y: 0,
-            z: -data.height * 0.3
+            z: -data.height * 0.3,
           });
-          ring.setAttribute('rotation', {
+          ring.setAttribute("rotation", {
             x: 90,
             y: 0,
-            z: 0
+            z: 0,
           });
-          
+
           el.appendChild(shaft);
           el.appendChild(head);
           el.appendChild(ring);
-          
+
           // Set up animation if pulsing is enabled
           if (data.pulsing) {
             this.setupPulseAnimation(head);
           }
-          
+
           // Set up floating animation
           if (data.floating) {
             this.setupFloatingAnimation(el);
           }
         },
-        
-        setupPulseAnimation: function(element) {
+
+        setupPulseAnimation: function (element) {
           // Add a subtle pulse animation to make the arrow more noticeable
-          const animation = document.createElement('a-animation');
-          animation.setAttribute('attribute', 'scale');
-          animation.setAttribute('from', '1 1 1');
-          animation.setAttribute('to', '1.1 1.1 1.1');
-          animation.setAttribute('dur', '1500');
-          animation.setAttribute('direction', 'alternate');
-          animation.setAttribute('repeat', 'indefinite');
-          animation.setAttribute('easing', 'ease-in-out');
-          
+          const animation = document.createElement("a-animation");
+          animation.setAttribute("attribute", "scale");
+          animation.setAttribute("from", "1 1 1");
+          animation.setAttribute("to", "1.1 1.1 1.1");
+          animation.setAttribute("dur", "1500");
+          animation.setAttribute("direction", "alternate");
+          animation.setAttribute("repeat", "indefinite");
+          animation.setAttribute("easing", "ease-in-out");
+
           element.appendChild(animation);
         },
-        
-        setupFloatingAnimation: function(element) {
+
+        setupFloatingAnimation: function (element) {
           // Add a gentle floating animation
-          const animation = document.createElement('a-animation');
-          animation.setAttribute('attribute', 'position');
-          animation.setAttribute('from', '0 0 0');
-          animation.setAttribute('to', '0 0.15 0');
-          animation.setAttribute('dur', '2000');
-          animation.setAttribute('direction', 'alternate');
-          animation.setAttribute('repeat', 'indefinite');
-          animation.setAttribute('easing', 'ease-in-out');
-          
+          const animation = document.createElement("a-animation");
+          animation.setAttribute("attribute", "position");
+          animation.setAttribute("from", "0 0 0");
+          animation.setAttribute("to", "0 0.15 0");
+          animation.setAttribute("dur", "2000");
+          animation.setAttribute("direction", "alternate");
+          animation.setAttribute("repeat", "indefinite");
+          animation.setAttribute("easing", "ease-in-out");
+
           element.appendChild(animation);
-        }
+        },
       });
 
       // Custom component to handle waypoint information display
@@ -387,12 +387,12 @@
       </div>
 
       <div>
-        <img src="/models/pattern-image_0901 (1).png" class="marker-image" />
+        <img src="models/pattern-image_0901 (1).png" class="marker-image" />
         <div class="marker-label">Marker 2: Reception Desk</div>
       </div>
       <div>
         <img
-          src="/models/pattern-relevantzemergingtech_logo (2).png"
+          src="models/pattern-relevantzemergingtech_logo (2).png"
           class="marker-image"
         />
         <div class="marker-label">Marker 3: Conference Room (Destination)</div>
@@ -406,10 +406,11 @@
       <!-- Marker for Waypoint 1 - Hiro marker -->
       <a-marker preset="hiro" waypoint-info="waypointId: waypoint1">
         <!-- 3D arrow pointing to the next waypoint -->
-        <a-entity 
-          direction-arrow="color: #00ff00; height: 0.8; width: 0.4; pulsing: true; floating: true" 
-          position="0 0.3 0" 
-          rotation="0 90 0">
+        <a-entity
+          direction-arrow="color: #00ff00; height: 0.8; width: 0.4; pulsing: true; floating: true"
+          position="0 0.3 0"
+          rotation="0 90 0"
+        >
         </a-entity>
 
         <!-- Waypoint information - moved higher to avoid overlap -->
@@ -448,14 +449,15 @@
       <!-- Marker for Waypoint 2 - Kanji marker -->
       <a-marker
         type="pattern"
-        url="http://localhost:3000/models/pattern-image_0901 (1).patt"
+        url="models/pattern-image_0901 (1).patt"
         waypoint-info="waypointId: waypoint2"
       >
         <!-- 3D arrow pointing to the next waypoint -->
-        <a-entity 
-          direction-arrow="color: #00ff00; height: 0.8; width: 0.4; pulsing: true; floating: true" 
-          position="0 0.3 0" 
-          rotation="0 -90 0">
+        <a-entity
+          direction-arrow="color: #00ff00; height: 0.8; width: 0.4; pulsing: true; floating: true"
+          position="0 0.3 0"
+          rotation="0 -90 0"
+        >
         </a-entity>
 
         <!-- Waypoint information - moved higher to avoid overlap -->
@@ -494,14 +496,15 @@
       <!-- Marker for Waypoint 3 (Final Destination) - Using pattern marker -->
       <a-marker
         type="pattern"
-        url="http://localhost:3000/models/pattern-relevantzemergingtech_logo (2).patt"
+        url="models/pattern-relevantzemergingtech_logo (2).patt"
         waypoint-info="waypointId: waypoint3"
       >
         <!-- Destination indicator with improved 3D arrow pointing upward -->
-        <a-entity 
-          direction-arrow="color: #ffff00; height: 0.8; width: 0.4; pulsing: true; floating: true" 
-          position="0 0.3 0" 
-          rotation="-90 0 0">
+        <a-entity
+          direction-arrow="color: #ffff00; height: 0.8; width: 0.4; pulsing: true; floating: true"
+          position="0 0.3 0"
+          rotation="-90 0 0"
+        >
         </a-entity>
 
         <!-- Waypoint information - moved higher to avoid overlap -->
