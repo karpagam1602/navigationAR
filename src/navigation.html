@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Navigation Guide</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+    }
+    
+    .container {
+      max-width: 100%;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .compass {
+      width: 250px;
+      height: 250px;
+      background-color: #fff;
+      border-radius: 50%;
+      margin: 20px auto;
+      position: relative;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      border: 10px solid #ddd;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .arrow {
+      width: 10px;
+      height: 120px;
+      background-color: #FF5733;
+      clip-path: polygon(50% 0, 100% 80%, 50% 100%, 0 80%);
+      transform-origin: center center;
+      transition: transform 0.5s ease;
+    }
+    
+    .compass-center {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background-color: #333;
+      border-radius: 50%;
+    }
+    
+    .compass-marks {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    
+    .compass-mark {
+      position: absolute;
+      font-weight: bold;
+    }
+    
+    .compass-mark.north { top: 10px; left: 50%; transform: translateX(-50%); }
+    .compass-mark.east { top: 50%; right: 10px; transform: translateY(-50%); }
+    .compass-mark.south { bottom: 10px; left: 50%; transform: translateX(-50%); }
+    .compass-mark.west { top: 50%; left: 10px; transform: translateY(-50%); }
+    
+    .status-message {
+      text-align: center;
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+    
+    .destination-panel {
+      background-color: white;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .destination-title {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .destination-description {
+      color: #666;
+      margin-bottom: 15px;
+    }
+    
+    .distance-indicator {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #4CAF50;
+    }
+    
+    .button-container {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 0;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+      flex: 1;
+    }
+    
+    .button.secondary {
+      background-color: #607D8B;
+    }
+    
+    .location-list {
+      background-color: white;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .location-list h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+    
+    .location-item {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+    
+    .location-item.active {
+      background-color: #e8f5e9;
+      font-weight: bold;
+      color: #4CAF50;
+    }
+    
+    .map-container {
+      width: 100%;
+      height: 200px;
+      background-color: #eee;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .map-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 16px;
+      color: #666;
+    }
+    
+    .user-position {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background-color: blue;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+    
+    .destination-position {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background-color: red;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+    
+    .debug-panel {
+      background-color: #f0f0f0;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 10px;
+      margin-top: 20px;
+      font-size: 12px;
+      display: none;
+    }
+    
+    .debug-panel.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Map View -->
+    <div class="map-container" id="map-container">
+      <div class="map-placeholder" id="map-placeholder">
+        Map View
+        <div class="user-position" id="user-position"></div>
+        <div class="destination-position" id="destination-position"></div>
+      </div>
+    </div>
+    
+    <!-- Status message -->
+    <div class="status-message" id="status-message">Getting your location...</div>
+    
+    <!-- Current Destination Info -->
+    <div class="destination-panel">
+      <div class="destination-title" id="destination-title">Loading...</div>
+      <div class="destination-description" id="destination-description"></div>
+      <div class="distance-indicator" id="distance-indicator">--</div>
+      <div class="button-container">
+        <button class="button" id="next-button">Navigate to Next Location</button>
+        <button class="button secondary" id="arrived-button">I've Arrived</button>
+      </div>
+    </div>
+    
+    <!-- Compass Navigation -->
+    <div class="compass">
+      <div class="compass-marks">
+        <div class="compass-mark north">N</div>
+        <div class="compass-mark east">E</div>
+        <div class="compass-mark south">S</div>
+        <div class="compass-mark west">W</div>
+      </div>
+      <div class="arrow" id="direction-arrow"></div>
+      <div class="compass-center"></div>
+    </div>
+    
+    <!-- Location List -->
+    <div class="location-list">
+      <h3>Destinations</h3>
+      <div id="location-list">
+        <!-- Will be populated by JavaScript -->
+      </div>
+    </div>
+    
+    <!-- Debug panel -->
+    <div class="debug-panel" id="debug-panel">
+      <div id="debug-info">Debug information will appear here</div>
+    </div>
+  </div>
+
+  <script>
+    // Application data and state
+    const app = {
+      // Location data - now with full coordinates
+      locations: [
+        {
+          name: "Main Entrance",
+          description: "The building entrance",
+          coordinates: { lat: 37.7749, lng: -122.4194 }
+        },
+        {
+          name: "Reception Desk",
+          description: "Check in with receptionist",
+          coordinates: { lat: 37.7750, lng: -122.4191 }
+        },
+        {
+          name: "Elevator",
+          description: "Take elevator to your floor",
+          coordinates: { lat: 37.7751, lng: -122.4190 }
+        },
+        {
+          name: "Meeting Room 101",
+          description: "First conference room",
+          coordinates: { lat: 37.7748, lng: -122.4189 }
+        },
+        {
+          name: "Cafeteria",
+          description: "Grab coffee or lunch",
+          coordinates: { lat: 37.7747, lng: -122.4195 }
+        }
+      ],
+      
+      // Current state
+      currentIndex: 0,
+      userPosition: null,
+      compassHeading: 0,
+      isDebugMode: false,
+      
+      // UI Elements
+      elements: {
+        arrow: null,
+        destinationTitle: null,
+        destinationDescription: null,
+        distanceIndicator: null,
+        nextButton: null,
+        arrivedButton: null,
+        locationList: null,
+        statusMessage: null,
+        debugPanel: null,
+        debugInfo: null,
+        userPositionMarker: null,
+        destinationPositionMarker: null,
+        mapPlaceholder: null
+      },
+      
+      // Initialize the application
+      init: function() {
+        // Get UI elements
+        this.elements.arrow = document.getElementById('direction-arrow');
+        this.elements.destinationTitle = document.getElementById('destination-title');
+        this.elements.destinationDescription = document.getElementById('destination-description');
+        this.elements.distanceIndicator = document.getElementById('distance-indicator');
+        this.elements.nextButton = document.getElementById('next-button');
+        this.elements.arrivedButton = document.getElementById('arrived-button');
+        this.elements.locationList = document.getElementById('location-list');
+        this.elements.statusMessage = document.getElementById('status-message');
+        this.elements.debugPanel = document.getElementById('debug-panel');
+        this.elements.debugInfo = document.getElementById('debug-info');
+        this.elements.userPositionMarker = document.getElementById('user-position');
+        this.elements.destinationPositionMarker = document.getElementById('destination-position');
+        this.elements.mapPlaceholder = document.getElementById('map-placeholder');
+        
+        // Add event listeners
+        this.elements.nextButton.addEventListener('click', () => this.nextDestination());
+        this.elements.arrivedButton.addEventListener('click', () => this.markAsArrived());
+        
+        // Enable debug mode with double tap on the compass
+        const compass = document.querySelector('.compass');
+        let lastTap = 0;
+        compass.addEventListener('click', () => {
+          const currentTime = new Date().getTime();
+          const tapLength = currentTime - lastTap;
+          if (tapLength < 500 && tapLength > 0) {
+            this.toggleDebugMode();
+          }
+          lastTap = currentTime;
+        });
+        
+        // Start location tracking
+        this.startLocationTracking();
+        
+        // Start compass tracking
+        this.startCompassTracking();
+        
+        // Populate location list
+        this.populateLocationList();
+        
+        // Update destination info
+        this.updateDestination();
+        
+        // Initial simulated position update (for demo purposes)
+        this.simulatePositionUpdate();
+      },
+      
+      // Toggle debug mode
+      toggleDebugMode: function() {
+        this.isDebugMode = !this.isDebugMode;
+        this.elements.debugPanel.classList.toggle('active', this.isDebugMode);
+        this.logDebug("Debug mode " + (this.isDebugMode ? "enabled" : "disabled"));
+      },
+      
+      // Log debug info
+      logDebug: function(message) {
+        if (this.isDebugMode) {
+          this.elements.debugInfo.innerHTML += `<div>${message}</div>`;
+          this.elements.debugInfo.scrollTop = this.elements.debugInfo.scrollHeight;
+        }
+      },
+      
+      // Start location tracking
+      startLocationTracking: function() {
+        if (navigator.geolocation) {
+          this.elements.statusMessage.textContent = "Getting your location...";
+          
+          // Watch position updates
+          navigator.geolocation.watchPosition(
+            (position) => this.handlePositionUpdate(position),
+            (error) => this.handleLocationError(error),
+            { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 }
+          );
+        } else {
+          this.elements.statusMessage.textContent = "Geolocation is not supported by this browser.";
+          this.logDebug("Geolocation not supported");
+          
+          // Fall back to simulated positioning for demo
+          this.simulatePositionUpdate();
+        }
+      },
+      
+      // Handle position update
+      handlePositionUpdate: function(position) {
+        this.userPosition = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        
+        this.elements.statusMessage.textContent = "Location found. Navigate to your destination.";
+        this.logDebug(`Position updated: ${this.userPosition.lat}, ${this.userPosition.lng}`);
+        
+        // Update the map and compass
+        this.updateMapView();
+        this.updateCompassDirection();
+      },
+      
+      // Handle location error
+      handleLocationError: function(error) {
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            this.elements.statusMessage.textContent = "Location access denied. Please enable location services.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            this.elements.statusMessage.textContent = "Location information is unavailable.";
+            break;
+          case error.TIMEOUT:
+            this.elements.statusMessage.textContent = "Location request timed out.";
+            break;
+          case error.UNKNOWN_ERROR:
+            this.elements.statusMessage.textContent = "An unknown error occurred.";
+            break;
+        }
+        
+        this.logDebug(`Geolocation error: ${error.message}`);
+        
+        // Fall back to simulated positioning for demo
+        this.simulatePositionUpdate();
+      },
+      
+      // Start compass tracking
+      startCompassTracking: function() {
+        if (window.DeviceOrientationEvent) {
+          window.addEventListener('deviceorientationabsolute', (event) => {
+            // Get compass heading (alpha value)
+            if (event.alpha !== null) {
+              this.compassHeading = event.alpha;
+              this.updateCompassDirection();
+              this.logDebug(`Compass heading: ${this.compassHeading.toFixed(1)}°`);
+            }
+          }, true);
+          
+          // Fallback to regular deviceorientation if absolute is not available
+          window.addEventListener('deviceorientation', (event) => {
+            if (typeof event.webkitCompassHeading !== 'undefined') {
+              // iOS compass heading
+              this.compassHeading = event.webkitCompassHeading;
+              this.updateCompassDirection();
+              this.logDebug(`iOS compass heading: ${this.compassHeading.toFixed(1)}°`);
+            } else if (event.alpha !== null && typeof event.webkitCompassHeading === 'undefined') {
+              // Android/other compass heading
+              this.compassHeading = event.alpha;
+              this.updateCompassDirection();
+              this.logDebug(`Android compass heading: ${this.compassHeading.toFixed(1)}°`);
+            }
+          }, true);
+        } else {
+          this.elements.statusMessage.textContent += " Compass not supported.";
+          this.logDebug("Device orientation not supported");
+        }
+      },
+      
+      // Update compass direction based on current position and destination
+      updateCompassDirection: function() {
+        if (!this.userPosition) return;
+        
+        const destination = this.locations[this.currentIndex].coordinates;
+        const bearing = this.calculateBearing(
+          this.userPosition.lat, 
+          this.userPosition.lng, 
+          destination.lat, 
+          destination.lng
+        );
+        
+        // Calculate direction for the arrow (bearing - compass heading)
+        const direction = bearing - this.compassHeading;
+        
+        // Update arrow rotation
+        this.elements.arrow.style.transform = `rotate(${direction}deg)`;
+        
+        // Update distance
+        const distance = this.calculateDistance(
+          this.userPosition.lat, 
+          this.userPosition.lng, 
+          destination.lat, 
+          destination.lng
+        );
+        
+        this.elements.distanceIndicator.textContent = 
+          `Distance: ${distance < 1 ? Math.round(distance * 1000) + ' m' : distance.toFixed(1) + ' km'}`;
+          
+        // Log details in debug mode
+        this.logDebug(`Bearing to destination: ${bearing.toFixed(1)}°, Arrow: ${direction.toFixed(1)}°`);
+      },
+      
+      // Calculate bearing between two coordinates
+      calculateBearing: function(startLat, startLng, destLat, destLng) {
+        startLat = this.toRadians(startLat);
+        startLng = this.toRadians(startLng);
+        destLat = this.toRadians(destLat);
+        destLng = this.toRadians(destLng);
+        
+        const y = Math.sin(destLng - startLng) * Math.cos(destLat);
+        const x = Math.cos(startLat) * Math.sin(destLat) -
+                Math.sin(startLat) * Math.cos(destLat) * Math.cos(destLng - startLng);
+        let bearing = Math.atan2(y, x);
+        bearing = this.toDegrees(bearing);
+        bearing = (bearing + 360) % 360; // Normalize to 0-360
+        
+        return bearing;
+      },
+      
+      // Calculate distance between two coordinates (in km)
+      calculateDistance: function(lat1, lon1, lat2, lon2) {
+        const R = 6371; // Earth's radius in km
+        const dLat = this.toRadians(lat2 - lat1);
+        const dLon = this.toRadians(lon2 - lon1);
+        
+        const a = 
+          Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) * 
+          Math.sin(dLon/2) * Math.sin(dLon/2);
+          
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distance = R * c;
+        
+        return distance;
+      },
+      
+      // Convert degrees to radians
+      toRadians: function(degrees) {
+        return degrees * Math.PI / 180;
+      },
+      
+      // Convert radians to degrees
+      toDegrees: function(radians) {
+        return radians * 180 / Math.PI;
+      },
+      
+      // Update the map view
+      updateMapView: function() {
+        if (!this.userPosition) return;
+        
+        const destination = this.locations[this.currentIndex].coordinates;
+        
+        // For a real implementation, this would update a mapping API
+        // This is a simplified placeholder map
+        const mapWidth = this.elements.mapPlaceholder.offsetWidth;
+        const mapHeight = this.elements.mapPlaceholder.offsetHeight;
+        
+        // Place the user marker relative to the destination on the placeholder map
+        // This is just a simplified visualization
+        const latDiff = this.userPosition.lat - destination.lat;
+        const lngDiff = this.userPosition.lng - destination.lng;
+        
+        // Scale the differences to the map size
+        const scale = 50000; // Arbitrary scale factor for visualization
+        const xPos = (mapWidth / 2) - (lngDiff * scale);
+        const yPos = (mapHeight / 2) - (latDiff * scale);
+        
+        // Update marker positions
+        this.elements.userPositionMarker.style.left = `${Math.max(10, Math.min(mapWidth - 10, xPos))}px`;
+        this.elements.userPositionMarker.style.top = `${Math.max(10, Math.min(mapHeight - 10, yPos))}px`;
+        this.elements.destinationPositionMarker.style.left = `${mapWidth / 2}px`;
+        this.elements.destinationPositionMarker.style.top = `${mapHeight / 2}px`;
+      },
+      
+      // Simulate position updates for demo purposes
+      simulatePositionUpdate: function() {
+        // Generate a position near the current destination
+        const destination = this.locations[this.currentIndex].coordinates;
+        const randomOffset = 0.001; // ~100 meters
+        
+        this.userPosition = {
+          lat: destination.lat + (Math.random() * randomOffset * 2 - randomOffset),
+          lng: destination.lng + (Math.random() * randomOffset * 2 - randomOffset)
+        };
+        
+        this.elements.statusMessage.textContent = "Demo mode active. Position simulated.";
+        this.logDebug(`Simulated position: ${this.userPosition.lat}, ${this.userPosition.lng}`);
+        
+        // Update the map and compass
+        this.updateMapView();
+        this.updateCompassDirection();
+        
+        // Simulate compass heading changes
+        const simulateCompass = () => {
+          this.compassHeading = (this.compassHeading + 5) % 360;
+          this.updateCompassDirection();
+          
+          // Continue simulation
+          setTimeout(simulateCompass, 5000);
+        };
+        
+        // Start compass simulation
+        simulateCompass();
+      },
+      
+      // Populate the location list
+      populateLocationList: function() {
+        this.elements.locationList.innerHTML = '';
+        
+        this.locations.forEach((location, index) => {
+          const item = document.createElement('div');
+          item.className = 'location-item' + (index === this.currentIndex ? ' active' : '');
+          item.textContent = location.name;
+          
+          // Add click event to select location
+          item.addEventListener('click', () => {
+            this.currentIndex = index;
+            this.updateDestination();
+          });
+          
+          this.elements.locationList.appendChild(item);
+        });
+      },
+      
+      // Update destination info
+      updateDestination: function() {
+        const current = this.locations[this.currentIndex];
+        
+        this.elements.destinationTitle.textContent = current.name;
+        this.elements.destinationDescription.textContent = current.description;
+        
+        if (this.userPosition) {
+          this.updateCompassDirection();
+          this.updateMapView();
+        } else {
+          this.elements.distanceIndicator.textContent = 'Waiting for your location...';
+        }
+        
+        // Update location list
+        const items = this.elements.locationList.querySelectorAll('.location-item');
+        items.forEach((item, index) => {
+          if (index === this.currentIndex) {
+            item.classList.add('active');
+          } else {
+            item.classList.remove('active');
+          }
+        });
+        
+        this.logDebug(`Destination updated: ${current.name}`);
+      },
+      
+      // Move to next destination
+      nextDestination: function() {
+        this.currentIndex = (this.currentIndex + 1) % this.locations.length;
+        this.updateDestination();
+      },
+      
+      // Mark current destination as arrived
+      markAsArrived: function() {
+        // Check if user is actually close enough
+        if (this.userPosition) {
+          const destination = this.locations[this.currentIndex].coordinates;
+          const distance = this.calculateDistance(
+            this.userPosition.lat, 
+            this.userPosition.lng, 
+            destination.lat, 
+            destination.lng
+          );
+          
+          if (distance < 0.05) { // Within 50 meters
+            this.elements.statusMessage.textContent = `You've arrived at ${this.locations[this.currentIndex].name}!`;
+            this.logDebug(`Arrival confirmed at: ${this.locations[this.currentIndex].name}`);
+            
+            // Move to next destination after a short delay
+            setTimeout(() => this.nextDestination(), 2000);
+          } else {
+            this.elements.statusMessage.textContent = "You're not close enough to the destination yet.";
+            this.logDebug(`Arrival attempt rejected: ${distance.toFixed(3)} km away`);
+          }
+        } else {
+          // In demo mode, always allow marking as arrived
+          this.elements.statusMessage.textContent = `You've arrived at ${this.locations[this.currentIndex].name}!`;
+          setTimeout(() => this.nextDestination(), 2000);
+        }
+      }
+    };
+    
+    // Initialize when the page loads
+    window.addEventListener('DOMContentLoaded', () => {
+      app.init();
+    });
+  </script>
+</body>
+</html>

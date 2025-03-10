@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>AR Waypoint Navigation</title>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script>
+      // Waypoint data - reduced to 3 waypoints with the third as destination
+      const waypoints = [
+        {
+          id: "waypoint1",
+          name: "Building Entrance",
+          nextWaypoint: "waypoint2",
+          nextWaypointName: "Reception Desk",
+          directions: "Walk 20 meters ahead, then turn right",
+          marker: "hiro",
+          arrowRotation: "0 90 0", // Arrow pointing right
+          arrowColor: "#00ff00" // Green arrow
+        },
+        {
+          id: "waypoint2",
+          name: "Reception Desk",
+          nextWaypoint: "waypoint3",
+          nextWaypointName: "Conference Room",
+          directions:
+            "Go past reception and turn left at the end of the hallway",
+          marker: "kanji",
+          arrowRotation: "0 -90 0", // Arrow pointing left
+          arrowColor: "#00ff00" // Green arrow
+        },
+        {
+          id: "waypoint3",
+          name: "Conference Room",
+          nextWaypoint: "destination",
+          nextWaypointName: "Destination Reached",
+          directions: "You have arrived at the conference room",
+          marker: "patt",
+          arrowRotation: "0 0 0", // No arrow (or could be pointing up)
+          arrowColor: "#ffff00" // Yellow for destination
+        },
+      ];
+
+      // Improved 3D Arrow Component for AR Navigation
+      AFRAME.registerComponent('direction-arrow', {
+        schema: {
+          color: {type: 'color', default: '#00ff00'},
+          height: {type: 'number', default: 1.0},
+          width: {type: 'number', default: 0.5},
+          pulsing: {type: 'boolean', default: true},
+          floating: {type: 'boolean', default: true}
+        },
+        
+        init: function() {
+          const data = this.data;
+          const el = this.el;
+          
+          // Create arrow shaft
+          const shaft = document.createElement('a-entity');
+          shaft.setAttribute('geometry', {
+            primitive: 'box',
+            height: data.height * 0.1,
+            width: data.width * 0.2,
+            depth: data.height * 0.6
+          });
+          shaft.setAttribute('material', {
+            color: data.color,
+            transparent: true,
+            opacity: 0.9
+          });
+          shaft.setAttribute('position', {
+            x: 0, 
+            y: 0, 
+            z: -data.height * 0.3
+          });
+          
+          // Create arrow head (a triangular prism)
+          const head = document.createElement('a-entity');
+          head.setAttribute('geometry', {
+            primitive: 'cone',
+            height: data.height * 0.4,
+            radiusBottom: data.width * 0.3,
+            radiusTop: 0,
+            segmentsRadial: 8
+          });
+          head.setAttribute('material', {
+            color: data.color,
+            transparent: true,
+            opacity: 0.9
+          });
+          head.setAttribute('position', {
+            x: 0, 
+            y: 0, 
+            z: data.height * 0.15
+          });
+          head.setAttribute('rotation', {
+            x: 90,
+            y: 0,
+            z: 0
+          });
+          
+          // Create a ring to highlight the arrow
+          const ring = document.createElement('a-entity');
+          ring.setAttribute('geometry', {
+            primitive: 'torus',
+            radius: data.width * 0.4,
+            radiusTubular: data.width * 0.05
+          });
+          ring.setAttribute('material', {
+            color: '#ffffff',
+            emissive: data.color,
+            emissiveIntensity: 0.5,
+            transparent: true,
+            opacity: 0.7
+          });
+          ring.setAttribute('position', {
+            x: 0,
+            y: 0,
+            z: -data.height * 0.3
+          });
+          ring.setAttribute('rotation', {
+            x: 90,
+            y: 0,
+            z: 0
+          });
+          
+          el.appendChild(shaft);
+          el.appendChild(head);
+          el.appendChild(ring);
+          
+          // Set up animation if pulsing is enabled
+          if (data.pulsing) {
+            this.setupPulseAnimation(head);
+          }
+          
+          // Set up floating animation
+          if (data.floating) {
+            this.setupFloatingAnimation(el);
+          }
+        },
+        
+        setupPulseAnimation: function(element) {
+          // Add a subtle pulse animation to make the arrow more noticeable
+          const animation = document.createElement('a-animation');
+          animation.setAttribute('attribute', 'scale');
+          animation.setAttribute('from', '1 1 1');
+          animation.setAttribute('to', '1.1 1.1 1.1');
+          animation.setAttribute('dur', '1500');
+          animation.setAttribute('direction', 'alternate');
+          animation.setAttribute('repeat', 'indefinite');
+          animation.setAttribute('easing', 'ease-in-out');
+          
+          element.appendChild(animation);
+        },
+        
+        setupFloatingAnimation: function(element) {
+          // Add a gentle floating animation
+          const animation = document.createElement('a-animation');
+          animation.setAttribute('attribute', 'position');
+          animation.setAttribute('from', '0 0 0');
+          animation.setAttribute('to', '0 0.15 0');
+          animation.setAttribute('dur', '2000');
+          animation.setAttribute('direction', 'alternate');
+          animation.setAttribute('repeat', 'indefinite');
+          animation.setAttribute('easing', 'ease-in-out');
+          
+          element.appendChild(animation);
+        }
+      });
+
+      // Custom component to handle waypoint information display
+      AFRAME.registerComponent("waypoint-info", {
+        schema: {
+          waypointId: { type: "string", default: "waypoint1" },
+        },
+
+        init: function () {
+          const waypointId = this.data.waypointId;
+          const waypoint = waypoints.find((wp) => wp.id === waypointId);
+
+          if (!waypoint) {
+            console.error("Waypoint not found:", waypointId);
+            return;
+          }
+
+          // Add marker found event
+          this.el.addEventListener("markerFound", () => {
+            // Update the waypoint information
+            const locationText = document.querySelector(
+              "#current-location-" + waypointId
+            );
+            const nextText = document.querySelector(
+              "#next-waypoint-" + waypointId
+            );
+            const directionsText = document.querySelector(
+              "#directions-" + waypointId
+            );
+
+            if (locationText) {
+              locationText.setAttribute("value", `Current: ${waypoint.name}`);
+            }
+
+            if (nextText) {
+              nextText.setAttribute(
+                "value",
+                `Next: ${waypoint.nextWaypointName}`
+              );
+            }
+
+            if (directionsText) {
+              directionsText.setAttribute("value", waypoint.directions);
+            }
+
+            // Save the state to localStorage so we can track progress
+            localStorage.setItem("currentWaypoint", waypointId);
+            localStorage.setItem("nextWaypoint", waypoint.nextWaypoint);
+
+            // Trigger a notification about progress
+            this.showNotification(
+              `Reached ${waypoint.name}! Follow directions to ${waypoint.nextWaypointName}`
+            );
+
+            // Update the progress bar
+            this.updateProgressBar(waypointId);
+          });
+        },
+
+        showNotification: function (message) {
+          const notification = document.querySelector(".notification");
+          notification.textContent = message;
+          notification.classList.add("show");
+
+          setTimeout(() => {
+            notification.classList.remove("show");
+          }, 5000);
+        },
+
+        updateProgressBar: function (currentWaypoint) {
+          const dots = document.querySelectorAll(".waypoint-dot");
+
+          let foundCurrent = false;
+
+          dots.forEach((dot) => {
+            const waypointId = dot.getAttribute("data-waypoint");
+
+            if (waypointId === currentWaypoint) {
+              dot.classList.add("active");
+              foundCurrent = true;
+            } else if (!foundCurrent) {
+              dot.classList.add("completed");
+            } else {
+              dot.classList.remove("active");
+              dot.classList.remove("completed");
+            }
+          });
+        },
+      });
+    </script>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+      }
+
+      .notification {
+        position: fixed;
+        top: -60px;
+        left: 0;
+        right: 0;
+        background-color: rgba(0, 150, 0, 0.9);
+        color: white;
+        text-align: center;
+        padding: 15px;
+        z-index: 1000;
+        transition: top 0.5s;
+      }
+
+      .notification.show {
+        top: 0;
+      }
+
+      .progress-bar {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        height: 40px;
+        background: rgba(0, 0, 0, 0.7);
+        border-radius: 20px;
+        z-index: 900;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 15px;
+      }
+
+      .waypoint-dot {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #555;
+        position: relative;
+      }
+
+      .waypoint-dot.active {
+        background: #00ff00;
+      }
+
+      .waypoint-dot.completed {
+        background: #00aa00;
+      }
+
+      .waypoint-line {
+        height: 3px;
+        background: #555;
+        flex-grow: 1;
+        margin: 0 5px;
+      }
+
+      .instructions {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 15px;
+        border-radius: 10px;
+        z-index: 900;
+      }
+
+      .marker-images {
+        display: none;
+      }
+
+      @media print {
+        .marker-images {
+          display: block;
+          page-break-after: always;
+        }
+
+        .marker-image {
+          width: 100%;
+          max-width: 500px;
+          margin: 20px auto;
+          display: block;
+        }
+
+        .marker-label {
+          text-align: center;
+          font-size: 24px;
+          margin-top: 10px;
+        }
+
+        body > *:not(.marker-images) {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="notification">Waypoint reached!</div>
+
+    <div class="progress-bar">
+      <div class="waypoint-dot" data-waypoint="waypoint1"></div>
+      <div class="waypoint-line"></div>
+      <div class="waypoint-dot" data-waypoint="waypoint2"></div>
+      <div class="waypoint-line"></div>
+      <div class="waypoint-dot" data-waypoint="waypoint3"></div>
+    </div>
+
+    <div class="instructions">
+      Scan the AR marker at each waypoint to get directions to the next location
+    </div>
+
+    <!-- For printing out the markers -->
+    <div class="marker-images">
+      <h1>AR Navigation Markers</h1>
+      <p>Print these markers and place them at their respective locations</p>
+
+      <div>
+        <img
+          src="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png"
+          class="marker-image"
+        />
+        <div class="marker-label">Marker 1: Building Entrance</div>
+      </div>
+
+      <div>
+        <img src="/models/pattern-image_0901 (1).png" class="marker-image" />
+        <div class="marker-label">Marker 2: Reception Desk</div>
+      </div>
+      <div>
+        <img
+          src="/models/pattern-relevantzemergingtech_logo (2).png"
+          class="marker-image"
+        />
+        <div class="marker-label">Marker 3: Conference Room (Destination)</div>
+      </div>
+    </div>
+
+    <a-scene
+      embedded
+      arjs="sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+    >
+      <!-- Marker for Waypoint 1 - Hiro marker -->
+      <a-marker preset="hiro" waypoint-info="waypointId: waypoint1">
+        <!-- 3D arrow pointing to the next waypoint -->
+        <a-entity 
+          direction-arrow="color: #00ff00; height: 0.8; width: 0.4; pulsing: true; floating: true" 
+          position="0 0.3 0" 
+          rotation="0 90 0">
+        </a-entity>
+
+        <!-- Waypoint information - moved higher to avoid overlap -->
+        <a-text
+          id="current-location-waypoint1"
+          value="Current: Building Entrance"
+          position="0 1.5 0"
+          color="#FFFFFF"
+          align="center"
+          scale="1 1 1"
+        >
+        </a-text>
+
+        <a-text
+          id="next-waypoint-waypoint1"
+          value="Next: Reception Desk"
+          position="0 1.3 0"
+          color="#00FF00"
+          align="center"
+          scale="1 1 1"
+        >
+        </a-text>
+
+        <a-text
+          id="directions-waypoint1"
+          value="Walk 20 meters ahead, then turn right"
+          position="0 1.1 0"
+          color="#FFFF00"
+          align="center"
+          width="4"
+          scale="1 1 1"
+        >
+        </a-text>
+      </a-marker>
+
+      <!-- Marker for Waypoint 2 - Kanji marker -->
+      <a-marker
+        type="pattern"
+        url="http://localhost:3000/models/pattern-image_0901 (1).patt"
+        waypoint-info="waypointId: waypoint2"
+      >
+        <!-- 3D arrow pointing to the next waypoint -->
+        <a-entity 
+          direction-arrow="color: #00ff00; height: 0.8; width: 0.4; pulsing: true; floating: true" 
+          position="0 0.3 0" 
+          rotation="0 -90 0">
+        </a-entity>
+
+        <!-- Waypoint information - moved higher to avoid overlap -->
+        <a-text
+          id="current-location-waypoint2"
+          value="Current: Reception Desk"
+          position="0 1.5 0"
+          color="#FFFFFF"
+          align="center"
+          scale="1 1 1"
+        >
+        </a-text>
+
+        <a-text
+          id="next-waypoint-waypoint2"
+          value="Next: Conference Room"
+          position="0 1.3 0"
+          color="#00FF00"
+          align="center"
+          scale="1 1 1"
+        >
+        </a-text>
+
+        <a-text
+          id="directions-waypoint2"
+          value="Go past reception and turn left at the end of the hallway"
+          position="0 1.1 0"
+          color="#FFFF00"
+          align="center"
+          width="4"
+          scale="1 1 1"
+        >
+        </a-text>
+      </a-marker>
+
+      <!-- Marker for Waypoint 3 (Final Destination) - Using pattern marker -->
+      <a-marker
+        type="pattern"
+        url="http://localhost:3000/models/pattern-relevantzemergingtech_logo (2).patt"
+        waypoint-info="waypointId: waypoint3"
+      >
+        <!-- Destination indicator with improved 3D arrow pointing upward -->
+        <a-entity 
+          direction-arrow="color: #ffff00; height: 0.8; width: 0.4; pulsing: true; floating: true" 
+          position="0 0.3 0" 
+          rotation="-90 0 0">
+        </a-entity>
+
+        <!-- Waypoint information - moved higher to avoid overlap -->
+        <a-text
+          id="current-location-waypoint3"
+          value="Destination Reached!"
+          position="0 1.5 0"
+          color="#00FF00"
+          align="center"
+          scale="1.5 1.5 1.5"
+        >
+        </a-text>
+
+        <a-text
+          id="next-waypoint-waypoint3"
+          value="Conference Room"
+          position="0 1.3 0"
+          color="#FFFFFF"
+          align="center"
+          scale="1 1 1"
+        >
+        </a-text>
+
+        <a-text
+          id="directions-waypoint3"
+          value="You have arrived at your destination"
+          position="0 1.1 0"
+          color="#FFFF00"
+          align="center"
+          width="4"
+          scale="1 1 1"
+        >
+        </a-text>
+      </a-marker>
+
+      <a-entity camera></a-entity>
+    </a-scene>
+
+    <script>
+      // Initialize the progress tracker
+      document.addEventListener("DOMContentLoaded", function () {
+        // Get current progress from localStorage or default to first waypoint
+        const currentWaypoint =
+          localStorage.getItem("currentWaypoint") || "waypoint1";
+
+        // Update the progress bar
+        updateProgressBar(currentWaypoint);
+
+        // Function to update the progress bar visualization
+        function updateProgressBar(currentWaypoint) {
+          const dots = document.querySelectorAll(".waypoint-dot");
+
+          let foundCurrent = false;
+
+          dots.forEach((dot) => {
+            const waypointId = dot.getAttribute("data-waypoint");
+
+            if (waypointId === currentWaypoint) {
+              dot.classList.add("active");
+              foundCurrent = true;
+            } else if (!foundCurrent) {
+              dot.classList.add("completed");
+            } else {
+              dot.classList.remove("active");
+              dot.classList.remove("completed");
+            }
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
